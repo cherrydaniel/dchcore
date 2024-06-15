@@ -5,7 +5,7 @@ const {env} = require('process');
 const {loge} = require('./util/logger.js');
 const {formatTime} = require('./util/time.js');
 
-const allowedOrigins = [env.DOMAIN, env.CLIENT_URL].filter(Boolean);
+const allowedOrigins = [...env.DOMAIN?.split(/\s*,\s*/g)||[], env.CLIENT_URL].filter(Boolean);
 
 const E = module.exports;
 
