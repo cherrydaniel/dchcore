@@ -14,19 +14,21 @@ E.createExpressApp = (opt={}, builder)=>{
         builder = opt;
         opt = {};
     }
-    let {port} = opt;
+    let {port, noCors} = opt;
     const app = express();
-    app.use(cors({
-        origin: function (origin, callback) {
-            if (!origin)
+    if (!noCors) {
+        app.use(cors({
+            origin: function (origin, callback) {
+                if (!origin)
+                    return callback(null, true);
+                if (allowedOrigins.includes(origin))
+                    return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
                 return callback(null, true);
-            if (allowedOrigins.includes(origin))
-                return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
-            return callback(null, true);
-        },
-        methods: 'GET,POST,PUT,DELETE',
-        credentials: true,
-    }));
+            },
+            methods: 'GET,POST,PUT,DELETE',
+            credentials: true,
+        }));
+    }
     app.use(express.json());
     app.use(cookieParser());
     app.use(E.mwUnifyParams);
