@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql');
 const {wait} = require('../util/concurrent.js');
-const {isString, isDevEnv, isProdEnv} = require('../util/util.js');
+const {isString} = require('../util/util.js');
 
 const E = module.exports;
 
@@ -15,11 +15,8 @@ E.connect = async ()=>{
         user: env.DB_USER,
         password: env.DB_PASSWORD,
         database: env.DB_NAME,
-        ...!isDevEnv() && {
-            ssl: {
-                ca: fs.readFileSync(path.join(
-                    __dirname, 'cert', `${isProdEnv() ? 'prd' : 'stg'}-ca.pem`)),
-            },
+        ...env.DB_CERT_FILE && {
+            ssl: {ca: fs.readFileSync(path.join(env.HOME, env.DB_CERT_FILE))},
         },
     });
     con.connect(err=>{
@@ -36,10 +33,8 @@ E.useConnection = async cb=>{
     finally { con.end(); }
 };
 
-E.query = async (con, stmt, opt={})=>{
+E.query = (stmt, opt={})=>E.useConnection(con=>{
     const {data} = opt;
-    if (isString(con))
-        return E.useConnection(_con=>E.query(_con, stmt, opt));
     if (data) {
         for (let [k, v] of Object.entries(data))
             stmt = stmt.replace(new RegExp(`:${k}`, 'g'), con.escape(v));
@@ -51,23 +46,23 @@ E.query = async (con, stmt, opt={})=>{
         w.resolve({result, fields});
     });
     return w.promise;
-};
+});
 
-E.select = async (con, table, opt={})=>{
+E.select = async (table, opt={})=>{
     const {selector='*', limit, where} = opt;
     let stmt = `SELECT ${selector} FROM ${table}`;
     if (where)
         stmt += ` WHERE ${where}`;
     if (limit)
         stmt += ` LIMIT ${limit}`;
-    return (await E.query(con, stmt, opt)).result;
+    return (await E.query(stmt, opt)).result;
 };
 
-E.selectOne = async (con, table, opt={})=>{
-    return (await E.select(con, table, {...opt, limit: 1}))[0];
+E.selectOne = async (table, opt={})=>{
+    return (await E.select(table, {...opt, limit: 1}))[0];
 };
 
-E.insert = async (con, table, opt={})=>{
+E.insert = async (table, opt={})=>{
     const {values} = opt;
     let stmt = `
         INSERT INTO ${table}
@@ -76,26 +71,22 @@ E.insert = async (con, table, opt={})=>{
         (${Object.keys(values).map(v=>`:${v}`).join(', ')})
     `;
     opt.data = {...opt.data, values};
-    return (await E.query(con, stmt, opt)).result;
+    return (await E.query(stmt, opt)).result;
 };
 
-E.update = async (con, table, opt={})=>{
-    const {values, where, upsert} = opt;
-    if (upsert) {
-        const existing = await E.selectOne(con, table, opt);
-        if (!existing)
-            return await E.insert(con, table, opt);
-    }
-    let stmt = `UPDATE ${table} SET ${Object.entries(values).map(([k, v])=>`${k} = ${con.escape(v)}`).join(', ')}`;
+E.update = async (table, opt={})=>{
+    const {values, where, data={}} = opt;
+    let stmt = `UPDATE ${table} SET ${Object.keys(values).map(k=>`${k} = :${k}`).join(', ')}`;
     if (where)
         stmt += ` WHERE ${where}`;
-    return (await E.query(con, stmt, opt)).result;
+    Object.assign(data, values);
+    return (await E.query(stmt, opt)).result;
 };
 
-E.remove = async (con, table, opt={})=>{
+E.remove = async (table, opt={})=>{
     const {where} = opt;
     let stmt = `DELETE FROM ${table}`;
     if (where)
         stmt += ` WHERE ${where}`;
-    return (await E.query(con, stmt, opt)).result;
+    return (await E.query(stmt, opt)).result;
 };

@@ -45,7 +45,7 @@ const timestamp = level=>formatTime() + ': ' + (level?.length ? level+': ' : '')
 
 const logToFile = v=>{
     if (env.LOG_FILE_ENABLE=='true' && env.LOG_FILE_DIR)
-        files.append(path.join(env.LOG_FILE_DIR, (env.LOG_FILE_PREFIX||'')+'_'+formatDate()+'.log'), v+os.EOL);
+        files.append(path.join(env.HOME, env.LOG_FILE_DIR, (env.LOG_FILE_PREFIX||'')+'_'+formatDate()+'.log'), v+os.EOL);
 };
 
 const doLog = async (args=[], level, prefix)=>{
