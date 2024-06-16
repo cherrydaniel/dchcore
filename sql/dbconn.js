@@ -70,7 +70,7 @@ E.insert = async (table, opt={})=>{
         VALUES
         (${Object.keys(values).map(v=>`:${v}`).join(', ')})
     `;
-    opt.data = {...opt.data, values};
+    opt.data = {...opt.data, ...values};
     return (await E.query(stmt, opt)).result;
 };
 
