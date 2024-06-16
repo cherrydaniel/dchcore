@@ -1,14 +1,14 @@
 const fs = require('fs');
+const {JSDOM} = require('jsdom');
+const {Readable} = require('stream');
+const {finished} = require('stream/promises');
 const {isString} = require("./util/util.js");
-const { wait } = require('./util/concurrent.js');
-const { Readable } = require('stream');
-const { finished } = require('stream/promises');
+const {wait} = require('./util/concurrent.js');
 
 const E = module.exports = netCall;
 
 const qsParse = (qs={})=>{
-    let result = '';
-    Object.entries(qs)
+    let result = Object.entries(qs)
         .map(([k, v])=>`${k}=${encodeURIComponent(v)}`)
         .join('&');
     if (result.length)
@@ -50,6 +50,12 @@ E.text = async (opt={})=>{
 E.json = async (opt={})=>{
     const response = await netCall(opt);
     return await response.json();
+};
+
+E.dom = async (opt={})=>{
+    const response = await E.text(opt);
+    const {document} = new JSDOM(response).window;
+    return document;
 };
 
 E.stream = (opt={})=>{
