@@ -9,6 +9,8 @@ const allowedOrigins = [...env.DOMAIN?.split(/\s*,\s*/g)||[], env.CLIENT_URL].fi
 
 const E = module.exports;
 
+E.RES_SENT = Symbol();
+
 E.createExpressApp = (opt={}, builder)=>{
     if (!builder) {
         builder = opt;
@@ -16,7 +18,9 @@ E.createExpressApp = (opt={}, builder)=>{
     }
     let {port, noCors} = opt;
     const app = express();
-    if (!noCors) {
+    if (noCors) {
+        app.use(cors());
+    } else {
         app.use(cors({
             origin: function (origin, callback) {
                 if (!origin)
@@ -40,7 +44,7 @@ E.createExpressApp = (opt={}, builder)=>{
 E.err = (message, status, code, extra)=>Object.assign(new Error(), {message, status, code, extra});
 
 const handleResult = (res, result)=>{
-    if (result === false)
+    if (result === E.RES_SENT)
         return;
     if (res.headersSent)
         return;
