@@ -77,7 +77,7 @@ E.mwValidateParams = (...params)=>(req, res, next)=>{
             !req.query.hasOwnProperty(p) &&
             !req.body.hasOwnProperty(p))
         {
-            return void next(err(`Missing parameter: ${p}`, 400, 'missing_parameter'));
+            return void next(E.err(`Missing parameter: ${p}`, 400, 'missing_parameter'));
         }
     }
     next();
