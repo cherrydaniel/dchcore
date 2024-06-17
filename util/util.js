@@ -1,3 +1,4 @@
+const path = require('path');
 const {env} = require('process');
 
 const E = module.exports;
@@ -120,3 +121,5 @@ E.isProdEnv = ()=>env.DCHENV==='PRD';
 E.isStgEnv = ()=>env.DCHENV==='STG';
 
 E.isDevEnv = ()=>env.DCHENV==='DEV';
+
+E.appPath = p=>path.join(env.APP_DIR||env.HOME, p);
