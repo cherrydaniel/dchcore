@@ -120,3 +120,19 @@ E.isProdEnv = ()=>env.DCHENV==='PRD';
 E.isStgEnv = ()=>env.DCHENV==='STG';
 
 E.isDevEnv = ()=>env.DCHENV==='DEV';
+
+E.arrToObj = (arr=[], iteratee)=>arr.reduce((acc, el)=>{
+    const res = E.isFunction(iteratee) ? iteratee(el) : iteratee;
+    let k, v;
+    if (Array.isArray(res)) {
+        [k, v] = res;
+    } else {
+        k = el;
+        v = res;
+    }
+    return {...acc, ...k?.length&&{[k]: v}};
+}, {});
+
+E.strEnum = (parts, ...args)=>E.arrToObj(E.qw(parts, ...args), String);
+
+E.symbolEnum = (parts, ...args)=>E.arrToObj(E.qw(parts, ...args), Symbol);

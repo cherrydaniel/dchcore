@@ -51,6 +51,8 @@ E.wait = ()=>{
 
 const LOCKS = {};
 
+E.isLocked = key=>!!LOCKS[key];
+
 E.obtainLock = (key, timeout)=>{
     const id = generateId({prefix: `lock_${key}`});
     const release = ()=>{
