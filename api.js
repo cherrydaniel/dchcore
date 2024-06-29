@@ -1,45 +1,50 @@
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const {env} = require('process');
 const {loge} = require('./util/logger.js');
 const {formatTime} = require('./util/time.js');
 
-const allowedOrigins = ['http://localhost:3000/'];
+const allowedOrigins = [...env.DOMAIN?.split(/\s*,\s*/g)||[], env.CLIENT_URL].filter(Boolean);
 
 const E = module.exports;
+
+E.RES_SENT = Symbol();
 
 E.createExpressApp = (opt={}, builder)=>{
     if (!builder) {
         builder = opt;
         opt = {};
     }
-    let {port} = opt;
+    let {port, noCors} = opt;
     const app = express();
-    app.use(cors({
-        origin: function (origin, callback) {
-            if (!origin)
+    if (noCors) {
+        app.use(cors());
+    } else {
+        app.use(cors({
+            origin: function (origin, callback) {
+                if (!origin)
+                    return callback(null, true);
+                if (allowedOrigins.includes(origin))
+                    return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
                 return callback(null, true);
-            if (allowedOrigins.includes(origin))
-                return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
-            return callback(null, true);
-        },
-        methods: 'GET,POST,PUT,DELETE',
-        credentials: true,
-    }));
+            },
+            methods: 'GET,POST,PUT,DELETE',
+            credentials: true,
+        }));
+    }
     app.use(express.json());
     app.use(cookieParser());
     app.use(E.mwUnifyParams);
     builder(app);
     app.use(E.mwErrorHandler);
-    app.listen(port, ()=>{
-        console.log(`API listening on port ${port}`);
-    });
+    return app.listen(port, ()=>console.log(`API listening on port ${port}`));
 };
 
 E.err = (message, status, code, extra)=>Object.assign(new Error(), {message, status, code, extra});
 
 const handleResult = (res, result)=>{
-    if (result === false)
+    if (result === E.RES_SENT)
         return;
     if (res.headersSent)
         return;
@@ -72,7 +77,7 @@ E.mwValidateParams = (...params)=>(req, res, next)=>{
             !req.query.hasOwnProperty(p) &&
             !req.body.hasOwnProperty(p))
         {
-            return void next(err(`Missing parameter: ${p}`, 400, 'missing_parameter'));
+            return void next(E.err(`Missing parameter: ${p}`, 400, 'missing_parameter'));
         }
     }
     next();

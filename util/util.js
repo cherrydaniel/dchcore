@@ -1,3 +1,4 @@
+const path = require('path');
 const {env} = require('process');
 
 const E = module.exports;
@@ -136,3 +137,5 @@ E.arrToObj = (arr=[], iteratee)=>arr.reduce((acc, el)=>{
 E.strEnum = (parts, ...args)=>E.arrToObj(E.qw(parts, ...args), String);
 
 E.symbolEnum = (parts, ...args)=>E.arrToObj(E.qw(parts, ...args), Symbol);
+
+E.appPath = p=>path.join(env.APP_DIR||env.HOME, p);

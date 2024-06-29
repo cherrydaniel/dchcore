@@ -5,8 +5,9 @@ const JSZip = require('jszip');
 
 const E = module.exports;
 
-E.append = (filname, data)=>new Promise((resolve, reject)=>{
-    fs.appendFile(filname, data, err=>{
+E.append = (filename, data)=>new Promise((resolve, reject)=>{
+    fs.mkdirSync(path.dirname(filename), {recursive: true});
+    fs.appendFile(filename, data, err=>{
         if (err)
             return void reject(err);
         resolve();
@@ -14,6 +15,7 @@ E.append = (filname, data)=>new Promise((resolve, reject)=>{
 });
 
 E.save = (filename, data)=>new Promise((resolve, reject) => {
+    fs.mkdirSync(path.dirname(filename), {recursive: true});
     fs.writeFile(filename, data, err=>{
         if (err)
             return void reject(err);
