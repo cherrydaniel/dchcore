@@ -4,6 +4,7 @@ const cors = require('cors');
 const {env} = require('process');
 const {loge} = require('./util/logger.js');
 const {formatTime} = require('./util/time.js');
+const { isObject } = require('./util/util.js');
 
 const allowedOrigins = [...env.DOMAIN?.split(/\s*,\s*/g)||[], env.CLIENT_URL].filter(Boolean);
 
@@ -66,20 +67,47 @@ E.handle = fn=>{
     };
 };
 
+const unifyParams = req=>Object.assign({}, req.params, req.query, structuredClone(req.body));
+
 E.mwUnifyParams = (req, res, next)=>{
-    req.allParams = Object.assign({}, req.params, req.query, structuredClone(req.body));
+    req.allParams = unifyParams(req);
     next();
 };
 
 E.mwValidateParams = (...params)=>(req, res, next)=>{
+    const params = req.allParams || unifyParams(req);
     for (let p of params) {
-        if (!req.params.hasOwnProperty(p) &&
-            !req.query.hasOwnProperty(p) &&
-            !req.body.hasOwnProperty(p))
-        {
+        if (!params.hasOwnProperty(p))
             return void next(E.err(`Missing parameter: ${p}`, 400, 'missing_parameter'));
-        }
     }
+    next();
+};
+
+E.mwParseQuery = schema=>(req, res, next)=>{
+    const q = {};
+    Object.entries(req.query).forEach(([k, v])=>{
+        if (!schema[k])
+            return;
+        const type = schema[k];
+        switch (type) {
+            case String: q[k] = v; break;
+            case Number: q[k] = +v||0; break;
+            case Boolean: q[k] = [].includes(v?.toLowerCase()); break;
+            case Object:
+                try {
+                    q[k] = JSON.parse(v); 
+                    q[k] = isObject(q[k]) && q[k];
+                } catch {}
+                break;
+            case Array:
+                try {
+                    q[k] = JSON.parse(v);
+                    q[k] = Array.isArray(q[k]) && q[k];
+                } catch {}
+                break;
+        }
+    });
+    req.query = q;
     next();
 };
 
