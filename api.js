@@ -4,7 +4,7 @@ const cors = require('cors');
 const {env} = require('process');
 const {loge} = require('./util/logger.js');
 const {formatTime} = require('./util/time.js');
-const { isObject } = require('./util/util.js');
+const {isObject} = require('./util/util.js');
 
 const allowedOrigins = [...env.DOMAIN?.split(/\s*,\s*/g)||[], env.CLIENT_URL].filter(Boolean);
 
@@ -52,20 +52,22 @@ const handleResult = (res, result)=>{
     res.json(Object.assign({ok: true}, result));
 };
 
-E.handle = fn=>{
-    return (req, res, next)=>{
-        if (fn.constructor.name === 'AsyncFunction') {
-            fn(req, res)
-                .then(result => {
-                    handleResult(res, result);
-                })
-                .catch(next);
-        } else {
-            const result = fn(req, res);
-            handleResult(res, result);
-        }
-    };
-};
+E.handle = fn=>(req, res, next)=>{ (async ()=>{
+    try {
+        let result = await fn(req, res);
+        handleResult(res, result);
+        if (result!==E.RES_SENT&&!res.headersSent)
+            res.json(Object.assign({ok: true}, result));
+        next();
+    } catch (e) { next(e); }
+})(); };
+
+E.mwHandle = fn=>(req, res, next)=>{ (async ()=>{
+    try {
+        await fn(req, res);
+        next();
+    } catch (e) { next(e); }
+})(); };
 
 const unifyParams = req=>Object.assign({}, req.params, req.query, structuredClone(req.body));
 
@@ -139,4 +141,10 @@ E.mwErrorHandler = (err, req, res, next)=>{
         code,
         extra,
     });
+};
+
+E.withAPIRouter = fn=>()=>{
+    const router = express.Router();
+    fn(router);
+    return router;
 };

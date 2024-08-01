@@ -1,4 +1,5 @@
 const os = require('os');
+const cluster = require('cluster');
 const path = require('path');
 const {env} = require('process');
 const cursor = require('ansi')(process.stdout);
@@ -39,9 +40,12 @@ E.LogColorizers = [
     [/(\bERROR\b)/g, Colors.bold, Colors.red],
     [/(\bCRIT\b)/g, Colors.bold, Colors.underline, Colors.overlined, Colors.bgRed],
     [RegExp('('+KawaiiEmojis.map(v=>escapeRegExp(v)).join('|')+')', 'g'), Colors.bold, Colors.magenta],
+    [/^(\[.+\])/g, Colors.bold],
 ];
 
-const timestamp = level=>formatTime() + ': ' + (level?.length ? level+': ' : '');
+const timestamp = level=>(cluster.isPrimary ? `[P:${process.pid}]` : `[W${cluster.worker.id}:${cluster.worker.process.pid}]`) +
+    ' ' + formatTime() + ': ' +
+    (level?.length ? level+': ' : '');
 
 const logToFile = v=>{
     if (env.LOG_FILE_ENABLE=='true' && env.LOG_FILE_DIR)

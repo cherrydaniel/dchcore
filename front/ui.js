@@ -1,8 +1,6 @@
-import styled, { keyframes } from 'styled-components';
-import theme from '../theme.js';
 import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
-import { useAppContext } from '../App.js';
-import config from '../config.js';
+import styled, { keyframes } from 'styled-components';
+import theme from './theme.js';
 
 const animationRotate = keyframes`
     0% {
@@ -55,19 +53,19 @@ export const ResponsiveFlex = styled(Flex)`
     }
 `;
 
-export const Image = styled(props=>{
-    let {className, src, filename, imgStyle, ...rest} = props;
-    return <Flex justifyContent='center' className={className} {...rest}>
-      <img src={filename ? `${config('IMAGEKIT_ENDPOINT')}${filename}` : src}
-        style={{width: '100%', ...imgStyle}}/>
-    </Flex>;
-})`
-    &>img {
-        ${p=>p.circle ? `border-radius: 50%;` : p.rounded ? `border-radius: 10px;` : ''}
-        ${p=>p.objectFit ? `object-fit: ${p.objectFit};` : ''}
-        ${p=>p.shadow ? `box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5);` : ''}
-    }
-`;
+// export const Image = styled(props=>{
+//     let {className, src, filename, imgStyle, ...rest} = props;
+//     return <Flex justifyContent='center' className={className} {...rest}>
+//       <img src={filename ? `${config('IMAGEKIT_ENDPOINT')}${filename}` : src}
+//         style={{width: '100%', ...imgStyle}}/>
+//     </Flex>;
+// })`
+//     &>img {
+//         ${p=>p.circle ? `border-radius: 50%;` : p.rounded ? `border-radius: 10px;` : ''}
+//         ${p=>p.objectFit ? `object-fit: ${p.objectFit};` : ''}
+//         ${p=>p.shadow ? `box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.5);` : ''}
+//     }
+// `;
 
 export const Icon = props=><i className={`${props.className || ''} ${props.name || ''}`}></i>;
 
@@ -105,26 +103,26 @@ export const Button = styled(props=>{
     }
 `;
 
-export const Page = styled(props=>{
-    const {children, docTitle, ...rest} = props;
-    const {setTitle} = useAppContext();
-    useEffect(()=>{
-        if (!docTitle)
-            return;
-        const unsetTitle = setTitle(docTitle);
-        return ()=>unsetTitle();
-    }, [setTitle, docTitle]);
-    return <Flex flexDirection='column' width='100vw' height='100vh' {...rest}>
-      {children}
-    </Flex>;
-})`
-    ${p=>p.bgFilename ? `background-image: url(${config('IMAGEKIT_ENDPOINT')}${p.bgFilename});` : ''}
-    background-size: cover;
-    background-color: ${theme.color.white};
-    color: ${theme.color.black};
-    position: fixed;
-    overflow-y: scroll;
-`;
+// export const Page = styled(props=>{
+//     const {children, docTitle, ...rest} = props;
+//     const {setTitle} = useAppContext();
+//     useEffect(()=>{
+//         if (!docTitle)
+//             return;
+//         const unsetTitle = setTitle(docTitle);
+//         return ()=>unsetTitle();
+//     }, [setTitle, docTitle]);
+//     return <Flex flexDirection='column' width='100vw' height='100vh' {...rest}>
+//       {children}
+//     </Flex>;
+// })`
+//     ${p=>p.bgFilename ? `background-image: url(${config('IMAGEKIT_ENDPOINT')}${p.bgFilename});` : ''}
+//     background-size: cover;
+//     background-color: ${theme.color.white};
+//     color: ${theme.color.black};
+//     position: fixed;
+//     overflow-y: scroll;
+// `;
 
 export const Section = props=>{
     

@@ -26,3 +26,21 @@ export const useBusyCallback = (fn, deps=[])=>{
     }, [fn, ...deps]);
     return [run, busy];
 };
+
+export const useData = (fn, deps=[])=>{
+    const [data, setData] = useState();
+    const [loading, setLoading] = useState(false);
+    const load = useCallback(()=>{
+        setLoading(true);
+        (async ()=>{
+            try {
+                await fn();
+            } finally {
+                setLoading(false);
+            }
+        })()
+    }, [setData, setLoading, ...deps]);
+    useEffect(()=>{ load(); }, [load]);
+    return [data, loading];
+};
+

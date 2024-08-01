@@ -1,4 +1,4 @@
-const {defer, generateId, createError} = require('./util.js');
+const {defer, generateId, createError, callbacks} = require('./util.js');
 
 const E = module.exports;
 
@@ -64,6 +64,8 @@ E.obtainLock = (key, timeout)=>{
     const w = E.wait();
     if (isFinite(timeout)) {
         setTimeout(()=>{
+            if (!LOCKS[key])
+                return;
             const idx = LOCKS[key].findIndex(v=>v.id==id);
             if (idx==-1)
                 return;
@@ -104,13 +106,112 @@ E.lockNLoad = async (key, timeout, loader)=>{
     return [await E.obtainLock(key, timeout), await loader()];
 };
 
+E.lockFunction = (obj, fn, opt={})=>{
+    let {key=`${obj.constructor.name}/${fn}/${generateId()}`, timeout} = opt;
+    const _fn = obj[fn];
+    Object.defineProperty(obj, fn, {value: async function(...args){
+        const lock = await E.obtainLock(key, timeout);
+        try {
+            return await _fn.apply(this, args);
+        } finally {
+            lock.release();
+        }
+    }});
+};
+
+E.genTaskFunction = (obj, fn)=>{
+    const _fn = obj[fn];
+    if (_fn.constructor.name=='GeneratorFunction') {
+        Object.defineProperty(obj, fn, {value: async function(...args){
+            let _this = this;
+            return await E.genTask(function*(){
+                return yield _fn.call(_this, this, ...args);
+            });
+        }});
+    } else {
+        Object.defineProperty(obj, fn, {value: async function(...args){
+            let _this = this;
+            return await E.genTask(async function(){
+                return await _fn.call(_this, this, ...args);
+            });
+        }});
+    }
+};
 
 E.GenTaskResult = function(){};
+
+class GenTask {
+    constructor(fn){
+        this._fn = fn;
+        this._errorCallbacks = callbacks();
+        this._finallyCallbacks = callbacks();
+    }
+    async _run(w){
+        this.startTime = Date.now();
+        try {
+            let result;
+            if (this._fn.constructor.name==='GeneratorFunction') {
+                this._it = this._fn.apply(this);
+                let n;
+                do {
+                    n = this._it.next(result);
+                    result = await n.value;
+                } while (!n.done);
+            } else {
+                result = await this._fn.apply(this);
+            }
+            w.resolve(result);
+        } catch (e) {
+            if (!this._errorCallbacks.size())
+                return void w.reject(e);
+            this._errorCallbacks.trigger(e);
+        } finally {
+            this._finallyCallbacks.trigger();
+            this.done = true;
+        }
+    }
+    onError(cb){
+        this._errorCallbacks.push(cb);
+    }
+    onFinally(cb){
+        this._finallyCallbacks.push(cb);
+    }
+    timeout(){
+
+    }
+    cancel(){
+
+    }
+    throwError(){
+
+    }
+    lock(){
+
+    }
+    hold(){
+
+    }
+    proceed(){
+
+    }
+    get duration(){
+        return Date.now()-this.startTime;
+    }
+}
+E.GenTask = GenTask;
+
+E.genTask_ = fn=>{
+    const gt = new GenTask(fn);
+    const w = E.wait();
+    gt._run(w);
+    return w.promise;
+};
 
 E.genTask = fn=>{
     const _startTime = Date.now();
     let shouldStop = false;
     let done = false;
+    let it;
     const w = E.wait();
     const errorCallbacks = [];
     const finallyCallbacks = [];
@@ -119,6 +220,7 @@ E.genTask = fn=>{
         if (errHandled===-1)
             w.reject(e);
     }
+    let holdWaiter = null;
     const handle = {
         onError: cb=>errorCallbacks.push(cb),
         onFinally: cb=>finallyCallbacks.push(cb),
@@ -130,13 +232,25 @@ E.genTask = fn=>{
                 done = true;
             }, ms);
         },
+        cancel: ()=>{
+            it?.throw(createError('Generator task cancelled', 'gen_task_cancelled'));
+            done = true;
+        },
         throwError: (message, code, extra)=>{
-            handleError(createError(message, code, extra));
+            it?.throw(createError(message, code, extra));
             done = true;
         },
         lock: async (key, timeout)=>{
             const lock = await E.obtainLock(key, timeout);
             handle.onFinally(()=>lock.release());
+        },
+        hold: ()=>{
+            holdWaiter = E.wait();
+            return holdWaiter.promise;
+        },
+        proceed: data=>{
+            holdWaiter?.resolve(data);
+            holdWaiter = null;
         },
         get startTime(){ return _startTime; },
         get duration(){ return Date.now()-_startTime; },
@@ -149,7 +263,7 @@ E.genTask = fn=>{
         try {
             let result;
             if (fn.constructor.name==='GeneratorFunction') {
-                let it = fn.apply(handle);
+                it = fn.apply(handle);
                 let n;
                 do {
                     n = it.next(result);
@@ -179,3 +293,13 @@ E.genTask.promise = fn=>E.genTask(fn).promise;
 E.genTask.isCancelled = e=>e.code==='gen_task_cancelled';
 
 E.genTask.isTimeout = e=>e.code==='gen_task_timeout';
+
+E.waitEmitter = (emitter, opt={})=>{
+    let {done, error} = opt;
+    let w = E.wait();
+    if (done)
+        emitter.on(done, w.resolve);
+    if (error)
+        emitter.on(error, w.reject);
+    return w.promise;
+};

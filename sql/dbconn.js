@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql');
 const {wait} = require('../util/concurrent.js');
-const {isString} = require('../util/util.js');
 
 const E = module.exports;
 

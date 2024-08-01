@@ -37,11 +37,12 @@ E.randomString = (length = 32) => {
 };
 
 E.generateId = (opt={})=>{
-    const {prefix, length} = opt;
+    const {prefix, length=32} = opt;
     let id = Date.now().toString(36);
-    id += E.randomString(length ? length-id.length : 32);
+    id += E.randomString(length-id.length);
     if (prefix)
         id = prefix+'_'+id;
+    id = id.substring(0, length);
     return id;
 };
 
@@ -57,6 +58,8 @@ E.splitLines = function(parts, ...args) {
     return E.templateToString(parts, args).trim().split(/\s*(\r\n|\r|\n)\s*/g)
         .filter(v=>!['\r\n', '\r', '\n'].includes(v));
 };
+
+E.json2str = (obj, indent=2, replacer=null)=>JSON.stringify(obj, replacer, indent);
 
 E.clearObj = obj=>{
     for (let k in obj) {
@@ -139,3 +142,18 @@ E.strEnum = (parts, ...args)=>E.arrToObj(E.qw(parts, ...args), String);
 E.symbolEnum = (parts, ...args)=>E.arrToObj(E.qw(parts, ...args), Symbol);
 
 E.appPath = p=>path.join(env.APP_DIR||env.HOME, p);
+
+E.callWith = (...args)=>fn=>fn.apply(null, args);
+
+E.callbacks = ()=>{
+    const cbs = {};
+    const remove = id=>()=>delete cbs[id];    
+    const add = cb=>{
+        const id = E.generateId();
+        cbs[id] = cb;
+        return remove(id);
+    };
+    const trigger = (...args)=>_.values(cbs).forEach(cb=>cb(...args));
+    const size = ()=>_.keys(cbs).length;
+    return {add, trigger, size};
+};
