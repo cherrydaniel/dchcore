@@ -6,9 +6,11 @@ E.MIN = 60*E.SEC;
 E.HOUR = 60*E.MIN;
 E.DAY = 24*E.HOUR;
 E.WEEK = 7*E.DAY;
+E.MONTH = 4*E.WEEK;
+E.YEAR = 365*E.DAY;
 
-E.formatDate = millis=>{
-    const d = millis ? new Date(millis) : new Date();
+E.formatDate = ms=>{
+    const d = ms ? new Date(ms) : new Date();
     let month = '' + (d.getMonth() + 1);
     let day = '' + d.getDate();
     let year = d.getFullYear();
@@ -19,8 +21,8 @@ E.formatDate = millis=>{
     return `${year}-${month}-${day}`;
 }
 
-E.formatTime = millis=>{
-    const d = millis ? new Date(millis) : new Date();
+E.formatTime = ms=>{
+    const d = ms ? new Date(ms) : new Date();
     let hours = '' + d.getHours();
     let minutes = '' + d.getMinutes();
     let seconds = '' + d.getSeconds();

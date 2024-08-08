@@ -1,44 +1,8 @@
-const {defer, generateId, createError, callbacks} = require('./util.js');
+const {generateId, createError, callbacks} = require('./util.js');
 
 const E = module.exports;
 
-E.asyncLock = ()=>{
-    const queue = [];
-    let lock = false;
-    return fn=>{
-        const {promise, trigger} = defer(fn);
-        queue.push(trigger);
-        if (lock)
-            return promise;
-        (async ()=>{
-            lock = true;
-            while (queue.length) {
-                const _trigger = queue.shift();
-                await _trigger();
-            }
-            lock = false;
-        })();
-        return promise;
-    };
-};
-
-E.sleep = ms=>new Promise(resolve=>setTimeout(resolve, ms));
-
-E.defer = fn=>{
-    let _resolve, _reject;
-    const promise = new Promise((resolve, reject)=>{
-        _resolve = resolve;
-        _reject = reject;
-    });
-    const trigger = async (...args)=>{
-        try {
-            _resolve(await fn.apply(null, args));
-        } catch (e) {
-            _reject(e);
-        }
-    };
-    return {promise, trigger};
-};
+E.sleep = ms=>new Promise(resolve=>setTimeout(resolve, Math.max(0, ms||0)));
 
 E.wait = ()=>{
     let resolve, reject;
@@ -148,54 +112,91 @@ class GenTask {
     }
     async _run(w){
         this.startTime = Date.now();
-        try {
-            let result;
-            if (this._fn.constructor.name==='GeneratorFunction') {
-                this._it = this._fn.apply(this);
-                let n;
-                do {
-                    n = this._it.next(result);
-                    result = await n.value;
-                } while (!n.done);
-            } else {
-                result = await this._fn.apply(this);
-            }
+        let result;
+        if (this._fn.constructor.name==='GeneratorFunction') {
+            this._it = function*(){
+                try { yield* this._fn.apply(this); }
+                catch (e) { this._doCatch(w, e); }
+                finally { this._doFinally(); }
+            }.apply(this);
+            let n;
+            do {
+                n = this._it.next(result);
+                result = await n.value;
+                console.log({result})
+            } while (!n.done);
             w.resolve(result);
-        } catch (e) {
-            if (!this._errorCallbacks.size())
-                return void w.reject(e);
-            this._errorCallbacks.trigger(e);
-        } finally {
-            this._finallyCallbacks.trigger();
-            this.done = true;
+        } else {
+            try {
+                result = await this._fn.apply(this);
+                w.resolve(result);
+            }
+            catch (e) { this._doCatch(w, e); }
+            finally { this._doFinally(); }
         }
     }
+    _doCatch(w, e){
+        if (!this._errorCallbacks.size()) {
+            this._done = true;
+            return void w.reject(e);
+        }
+        this._errorCallbacks.trigger(this, e);
+    }
+    _doFinally(){
+        this._finallyCallbacks.trigger(this);
+        this._done = true;
+    }
     onError(cb){
-        this._errorCallbacks.push(cb);
+        this._errorCallbacks.add(cb);
     }
     onFinally(cb){
-        this._finallyCallbacks.push(cb);
+        this._finallyCallbacks.add(cb);
     }
-    timeout(){
-
+    timeout(ms, err){
+        this.clearTimeout();
+        this._timeout = setTimeout(()=>{
+            if (this.done)
+                return;
+            this.throwError(createError(err||'Timeout', 'gen_task_timeout'));
+        }, ms);
     }
-    cancel(){
-
+    clearTimeout(){
+        if (this._timeout) {
+            clearTimeout(this._timeout);
+            this._timeout = null;
+        }
     }
-    throwError(){
-
+    cancel(v){
+        if (this.done)
+            return;
+        this._it.return(v);
     }
-    lock(){
-
+    throwError(e){
+        this._it.throw(e);
+    }
+    async lock(key, timeout){
+        const lock = await E.obtainLock(key, timeout);
+        this.onFinally(()=>lock.release());
     }
     hold(){
-
+        if (this.holdWaiter)
+            this.proceed();
+        this.holdWaiter = E.wait();
+        return this.holdWaiter.promise;
     }
-    proceed(){
-
+    proceed(v){
+        this.holdWaiter?.resolve(v);
+        this.holdWaiter = null;
+    }
+    proceedThrow(e){
+        this.holdWaiter?.reject(e);
+        this.holdWaiter = null;
     }
     get duration(){
         return Date.now()-this.startTime;
+    }
+    get done(){
+        return this._done;
     }
 }
 E.GenTask = GenTask;

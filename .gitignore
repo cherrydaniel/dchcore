@@ -130,4 +130,6 @@ dist
 .pnp.*
 
 
-tests/
+test/
+# move to dchweb
+front/

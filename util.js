@@ -1,16 +1,7 @@
-const path = require('path');
+const _ = require('lodash');
 const {env} = require('process');
 
 const E = module.exports;
-
-E.isString = v=>typeof v === 'string' || v instanceof String;
-
-E.isFunction = v=>v && {}.toString.call(v) === '[object Function]';
-
-E.isObject = v=>{
-    const type = typeof v;
-    return type === 'function' || (type === 'object' && !!v);
-};
 
 E.templateToString = function (parts, ...args) {
     let result = '';
@@ -24,13 +15,12 @@ E.templateToString = function (parts, ...args) {
     return result;
 };
 
-E.randomString = (length = 32) => {
-    let result = '';
+E.randomString = (length=32)=>{
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const charactersLength = characters.length;
+    let result = '';
     let counter = 0;
-    while (counter < length) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    while (counter<length) {
+        result += characters.charAt(Math.floor(Math.random()*characters.length));
         counter += 1;
     }
     return result;
@@ -69,6 +59,8 @@ E.clearObj = obj=>{
 };
 
 E.appendProps = (obj, props)=>{
+    if (!props)
+        return;
     const clone = structuredClone(props);
     Object.keys(clone).forEach(k=>obj[k] = clone[k]);
 };
@@ -84,40 +76,7 @@ E.escapeRegExp = str=>str.replace(RegExp('['+regexSpecials.join('\\')+']', 'g'),
 
 E.arrayRandom = arr=>arr[Math.floor(Math.random()*arr.length)];
 
-// https://stackoverflow.com/questions/424292/seedable-javascript-random-number-generator
-function RNG(seed) {
-    // LCG using GCC's constants
-    this.m = 0x80000000; // 2**31;
-    this.a = 1103515245;
-    this.c = 12345;
-    this.state = seed || Math.floor(Math.random() * (this.m - 1));
-}
-RNG.prototype.nextInt = function() {
-    this.state = (this.a * this.state + this.c) % this.m;
-    return this.state;
-}
-RNG.prototype.nextFloat = function() {
-    // returns in range [0,1]
-    return this.nextInt() / (this.m - 1);
-}
-RNG.prototype.nextRange = function(start, end) {
-    // returns in range [start, end): including start, excluding end
-    // can't modulu nextInt because of weak randomness in lower bits
-    var rangeSize = end - start;
-    var randomUnder1 = this.nextInt() / this.m;
-    return start + Math.floor(randomUnder1 * rangeSize);
-}
-RNG.prototype.choice = function(array) {
-    return array[this.nextRange(0, array.length)];
-}
-
-E.rng = new RNG();
-
 E.createError = (message, code, extra)=>Object.assign(new Error(), {message, code, extra});
-
-E.eqRange = (value, from, to)=>value>=from&&value<=to;
-    
-E.eqMargin = (num, value, margin=0)=>E.eqRange(num, value-margin/2, value+margin/2);
 
 E.isProdEnv = ()=>env.DCHENV==='PRD';
 
@@ -126,7 +85,7 @@ E.isStgEnv = ()=>env.DCHENV==='STG';
 E.isDevEnv = ()=>env.DCHENV==='DEV';
 
 E.arrToObj = (arr=[], iteratee)=>arr.reduce((acc, el)=>{
-    const res = E.isFunction(iteratee) ? iteratee(el) : iteratee;
+    const res = _.isFunction(iteratee) ? iteratee(el) : iteratee;
     let k, v;
     if (Array.isArray(res)) {
         [k, v] = res;
@@ -141,8 +100,6 @@ E.strEnum = (parts, ...args)=>E.arrToObj(E.qw(parts, ...args), String);
 
 E.symbolEnum = (parts, ...args)=>E.arrToObj(E.qw(parts, ...args), Symbol);
 
-E.appPath = p=>path.join(env.APP_DIR||env.HOME, p);
-
 E.callWith = (...args)=>fn=>fn.apply(null, args);
 
 E.callbacks = ()=>{
@@ -153,7 +110,11 @@ E.callbacks = ()=>{
         cbs[id] = cb;
         return remove(id);
     };
-    const trigger = (...args)=>_.values(cbs).forEach(cb=>cb(...args));
+    const trigger = (_this, ...args)=>_.values(cbs).forEach(cb=>cb.apply(_this, args));
     const size = ()=>_.keys(cbs).length;
     return {add, trigger, size};
 };
+
+E.isMocha = ()=>!!+process.env.MOCHA;
+
+E.isNode = ()=>typeof window === 'undefined' && typeof process === 'object';
