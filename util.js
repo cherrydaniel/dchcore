@@ -1,4 +1,5 @@
 const _ = require('lodash');
+const {wait} = require('./concurrent.js');
 
 const E = module.exports;
 
@@ -126,5 +127,17 @@ E.isMocha = ()=>!!+process.env.MOCHA;
 
 E.isNode = ()=>typeof window === 'undefined' && typeof process === 'object';
 
-if (E.isNode())
+if (E.isNode()) {
+
     E.appPath = p=>path.join(process.env.APP_DIR||process.env.HOME, p);
+
+    E.streamToString = stream=>{
+        const w = wait();
+        const chunks = [];
+        stream.on('data', data=>chunks.push(Buffer.from(data)));
+        stream.on('error', e=>w.reject(e));
+        stream.on('end', ()=>w.resolve(Buffer.concat(chunks).toString('utf-8')));
+        return w.promise;
+    };
+
+}
