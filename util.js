@@ -129,6 +129,8 @@ E.isNode = ()=>typeof window === 'undefined' && typeof process === 'object';
 
 if (E.isNode()) {
 
+    const {Readable} = require('stream');
+
     E.appPath = p=>path.join(process.env.APP_DIR||process.env.HOME, p);
 
     E.streamToString = stream=>{
@@ -139,5 +141,7 @@ if (E.isNode()) {
         stream.on('end', ()=>w.resolve(Buffer.concat(chunks).toString('utf-8')));
         return w.promise;
     };
+
+    E.stringToString = str=>Readable.from([str]);
 
 }
