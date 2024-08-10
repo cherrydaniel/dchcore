@@ -294,13 +294,3 @@ E.genTask.promise = fn=>E.genTask(fn).promise;
 E.genTask.isCancelled = e=>e.code==='gen_task_cancelled';
 
 E.genTask.isTimeout = e=>e.code==='gen_task_timeout';
-
-E.waitEmitter = (emitter, opt={})=>{
-    let {done, error} = opt;
-    let w = E.wait();
-    if (done)
-        emitter.on(done, w.resolve);
-    if (error)
-        emitter.on(error, w.reject);
-    return w.promise;
-};
