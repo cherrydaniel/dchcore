@@ -125,3 +125,5 @@ E.callbacks = ()=>{
 E.isMocha = ()=>!!+process.env.MOCHA;
 
 E.isNode = ()=>typeof window === 'undefined' && typeof process === 'object';
+
+E.isBrowser = ()=>!E.isNode();
