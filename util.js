@@ -142,6 +142,6 @@ if (E.isNode()) {
         return w.promise;
     };
 
-    E.stringToString = str=>Readable.from([str]);
+    E.stringToStream = str=>Readable.from([str]);
 
 }
