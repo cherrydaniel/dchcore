@@ -1,5 +1,4 @@
 const _ = require('lodash');
-const {env} = require('process');
 
 const E = module.exports;
 
@@ -78,11 +77,19 @@ E.arrayRandom = arr=>arr[Math.floor(Math.random()*arr.length)];
 
 E.createError = (message, code, extra)=>Object.assign(new Error(), {message, code, extra});
 
-E.isProdEnv = ()=>env.DCHENV==='PRD';
+E.getEnv = ()=>{
+    if (process.env.DCHENV=='PRD'||process.env.REACT_APP_ENV=='production')
+        return 'PRD';
+    if (process.env.DCHENV=='STG'||process.env.REACT_APP_ENV=='staging')
+        return 'STG';
+    return 'DEV';
+};
 
-E.isStgEnv = ()=>env.DCHENV==='STG';
+E.isProdEnv = ()=>E.getEnv()=='PRD';
 
-E.isDevEnv = ()=>env.DCHENV==='DEV';
+E.isStgEnv = ()=>E.getEnv()=='STG';
+
+E.isDevEnv = ()=>E.getEnv()=='DEV';
 
 E.arrToObj = (arr=[], iteratee)=>arr.reduce((acc, el)=>{
     const res = _.isFunction(iteratee) ? iteratee(el) : iteratee;
@@ -118,3 +125,6 @@ E.callbacks = ()=>{
 E.isMocha = ()=>!!+process.env.MOCHA;
 
 E.isNode = ()=>typeof window === 'undefined' && typeof process === 'object';
+
+if (E.isNode())
+    E.appPath = p=>path.join(process.env.APP_DIR||process.env.HOME, p);
