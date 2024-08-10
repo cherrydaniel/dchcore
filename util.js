@@ -1,5 +1,4 @@
 const _ = require('lodash');
-const {wait} = require('./concurrent.js');
 
 const E = module.exports;
 
@@ -126,9 +125,3 @@ E.callbacks = ()=>{
 E.isMocha = ()=>!!+process.env.MOCHA;
 
 E.isNode = ()=>typeof window === 'undefined' && typeof process === 'object';
-
-if (E.isNode()) {
-    
-    E.appPath = p=>path.join(process.env.APP_DIR||process.env.HOME, p);
-
-}
