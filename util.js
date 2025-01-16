@@ -127,3 +127,23 @@ E.isMocha = ()=>!!+process.env.MOCHA;
 E.isNode = ()=>typeof window === 'undefined' && typeof process === 'object';
 
 E.isBrowser = ()=>!E.isNode();
+
+E.dynamicProxy = getTarget=>new Proxy({}, {
+    get(__, prop){
+        let target = getTarget();
+        let v = Reflect.get(target, prop, target);
+        return _.isFunction(v) ? v.bind(target) : v;
+    },
+});
+
+E.lazyProxy = factory=>{
+    let target;
+    return new Proxy({}, {
+        get(__, prop){
+            if (!target)
+                target = factory();
+            let v = Reflect.get(target, prop, target);
+            return _.isFunction(v) ? v.bind(target) : v;
+        },
+    });
+};
