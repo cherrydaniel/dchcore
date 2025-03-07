@@ -39,6 +39,10 @@ E.nl2sp = function(parts, ...args) {
     return E.templateToString(parts, args).replace(/\s*(\r\n|\r|\n)\s*/g, ' ');
 };
 
+E.nl2br = function(parts, ...args) {
+    return E.templateToString(parts, args).replace(/\s*(\r\n|\r|\n)\s*/g, '<br/>');
+};
+
 E.qw = function(parts, ...args) {
     return E.templateToString(parts, args).trim().split(/\s+/g);
 };
@@ -127,3 +131,15 @@ E.isMocha = ()=>!!+process.env.MOCHA;
 E.isNode = ()=>typeof window === 'undefined' && typeof process === 'object';
 
 E.isBrowser = ()=>!E.isNode();
+
+E.isLittleEndian = (()=>{
+    let t32 = new Uint32Array(1);
+    let t8 = new Uint8Array(t32.buffer);
+    t8[0] = 0x0A;
+    t8[1] = 0x0B;
+    t8[2] = 0x0C;
+    t8[3] = 0x0D;
+    return t32[0]===0x0D0C0B0A;
+})();
+
+E.isBigEndian = !E.isLittleEndian;
