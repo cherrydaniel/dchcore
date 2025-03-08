@@ -2,17 +2,22 @@ const _ = require('lodash');
 
 const E = module.exports;
 
-E.templateToString = function (parts, ...args) {
+E.tagFn = cb=>function(parts, ...args){
     let result = '';
     if (!Array.isArray(parts))
         return parts;
-    for (let i = 0; i < parts.length; i++) {
+    for (let i = 0; i<parts.length; i++) {
         result += parts[i];
-        if (i < args?.length)
-            result += args[i];
+        if (i<args?.length)
+        {
+            let v = args[i];
+            result += _.isFunction(v) ? cb(v) : v;
+        }
     }
     return result;
 };
+
+E.templateToString = E.tagFn(v=>v());
 
 E.randomString = (length=32)=>{
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

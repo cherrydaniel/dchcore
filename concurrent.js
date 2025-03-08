@@ -1,4 +1,4 @@
-const {generateId, createError, callbacks} = require('./util.js');
+const {generateId, createError, callbacks, isNode} = require('./util.js');
 
 const E = module.exports;
 
@@ -294,3 +294,32 @@ E.genTask.promise = fn=>E.genTask(fn).promise;
 E.genTask.isCancelled = e=>e.code==='gen_task_cancelled';
 
 E.genTask.isTimeout = e=>e.code==='gen_task_timeout';
+
+E.asyncMap = async (arr, predicate)=>{
+    let results = arr.map(v=>({v}));
+    await Promise.all(results.map(async obj=>{
+        obj.v = await predicate(obj.v);        
+    }));
+    return results.map(obj=>obj.v);
+};
+
+E.asyncFilter = async (arr, predicate)=>{
+    let results = await E.asyncMap(arr,
+        async v=>({v, filter: await predicate(v)}));
+    return results.filter(obj=>obj.filter).map(obj=>obj.v);
+};
+
+E.waitTick = ()=>{
+    let w = E.wait();
+    if (isNode)
+        process.nextTick(w.resolve);
+    else
+        setTimeout(w.resolve, 0);
+    return w.promise;
+};
+
+E.waitEventEmitter = (emitter, ev)=>{
+    let w = E.wait();
+    emitter.once(ev, w.resolve);
+    return w.promise;
+};
