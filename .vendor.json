@@ -1,0 +1,10 @@
+{
+    "ignore": [
+        "package.json",
+        "package-lock.json",
+        ".env",
+        ".gitignore",
+        "test",
+        "node_modules"
+    ]
+}
